@@ -13,7 +13,11 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModelProvider
+import com.dicoding.asclepius.ViewModel.MainViewModel
+import com.dicoding.asclepius.ViewModel.ViewModelFactory
 import com.dicoding.asclepius.databinding.ActivityMainBinding
 import com.dicoding.asclepius.helper.ImageClassifierHelper
 import org.tensorflow.lite.task.vision.classifier.Classifications
@@ -31,7 +35,9 @@ private const val MAXIMAL_SIZE = 1000000
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var imageClassifierHelper: ImageClassifierHelper
-
+    private val mainViewModel: MainViewModel by viewModels {
+        ViewModelFactory.getInstance(this) as ViewModelProvider.Factory
+    }
     private var currentImageUri: Uri? = null
 
     private var requestPermission = registerForActivityResult(
@@ -55,12 +61,16 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+
         if (!allPermissionGranted()) {
             requestPermission.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
         }
 
         binding.galleryButton.setOnClickListener { startGallery() }
         binding.analyzeButton.setOnClickListener { analyzeImage() }
+        binding.buttonNews.setOnClickListener { openNews() }
+        binding.buttonHistory.setOnClickListener { openHistory() }
+
     }
 
     private fun startGallery() {
@@ -85,6 +95,16 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun openNews() {
+        val intent = Intent(this, NewsActivity::class.java)
+        startActivity(intent)
+    }
+
+    private fun openHistory() {
+        val intent = Intent(this, HistoryActivity::class.java)
+        startActivity(intent)
+    }
+
     private fun analyzeImage() {
         currentImageUri?.let { uri ->
             val imageFile = uriToFile(uri, this)?.reduceFileImage() // Konversi Uri ke File
@@ -97,6 +117,7 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     override fun onResult(result: List<Classifications>) {
+                        mainViewModel.insertHistory(uri, result)
                         result?.let { it ->
                             if (it.isNotEmpty()) {
                                 Log.d("Analysis Image", "Show Analysis : $result")
@@ -119,6 +140,13 @@ class MainActivity : AppCompatActivity() {
                 showToast("Image file is null, cannot analyze.")
             }
         } ?: Log.e("AnalyzeImage", "Current Image URI is null")
+
+        mainViewModel.errorMessage.observe(this) { errorMessage ->
+            if (errorMessage != null) {
+                showToast(errorMessage)
+            }
+        }
+
     }
 
     private fun createCustomTempFile(context: Context): File {
