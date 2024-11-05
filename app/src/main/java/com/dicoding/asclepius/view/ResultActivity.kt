@@ -21,13 +21,13 @@ class ResultActivity : AppCompatActivity() {
         binding = ActivityResultBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val historyId = intent.getStringExtra("historyId") // Ambil sebagai String
+        val historyId = intent.getStringExtra("historyId")
 
         if (historyId != null) {
             mainViewModel.historyById.observe(this) { history ->
                 history?.let {
                     val uriString = it.uri
-                    if (!uriString.isNullOrEmpty()) { // Periksa apakah uriString tidak null atau kosong
+                    if (!uriString.isNullOrEmpty()) {
                         binding.resultImage.setImageURI(Uri.parse(uriString))
                     } else {
                         Log.e("ResultActivity", "URI is null or empty")
@@ -35,7 +35,7 @@ class ResultActivity : AppCompatActivity() {
                     binding.resultText.text = "${it.category} ${it.percentage}"
                 }
             }
-            mainViewModel.historyById(historyId) // Panggil dengan historyId yang baru
+            mainViewModel.historyById(historyId)
         } else {
             val imageUriString = intent.getStringExtra(EXTRA_IMAGE_URI)
             val result: String? = intent.getStringExtra(EXTRA_RESULT)

@@ -20,6 +20,7 @@ import com.dicoding.asclepius.ViewModel.MainViewModel
 import com.dicoding.asclepius.ViewModel.ViewModelFactory
 import com.dicoding.asclepius.databinding.ActivityMainBinding
 import com.dicoding.asclepius.helper.ImageClassifierHelper
+import com.yalantis.ucrop.UCrop
 import org.tensorflow.lite.task.vision.classifier.Classifications
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -81,10 +82,30 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
         if (uri != null) {
-            currentImageUri = uri
-            showImage()
+            val destinationUri = Uri.fromFile(createCustomTempFile(this))
+
+            val uCropIntent = UCrop.of(uri, destinationUri)
+                .withAspectRatio(16F, 9F)
+                .withMaxResultSize(1920, 1080)
+                .getIntent(this)
+
+            cropResultLauncher.launch(uCropIntent)
         } else {
             Log.d("Photo Picker", "No media selected")
+        }
+    }
+
+    private val cropResultLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val resultUri = UCrop.getOutput(result.data!!)
+            if (resultUri != null) {
+                currentImageUri = resultUri
+                showImage()
+            } else {
+                Log.e("UCrop", "Crop operation failed")
+            }
         }
     }
 
