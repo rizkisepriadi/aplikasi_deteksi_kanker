@@ -20,6 +20,9 @@ class MainViewModel(private val cancerRepository: CancerRepository) : ViewModel(
     private val _cancerNews = MutableLiveData<List<ArticlesItem>?>()
     val cancerNews: LiveData<List<ArticlesItem>?> = _cancerNews
 
+    private val _currentImageUri = MutableLiveData<Uri?>()
+    val currentImageUri: LiveData<Uri?> = _currentImageUri
+
     private val _isLoading = MutableLiveData<Boolean?>()
     val isLoading: LiveData<Boolean?> = _isLoading
 
@@ -83,6 +86,12 @@ class MainViewModel(private val cancerRepository: CancerRepository) : ViewModel(
             if (!success) {
                 _errorMessage.value = "Failed to save data"
             }
+        }
+    }
+
+    fun saveUri(uri: Uri) {
+        viewModelScope.launch {
+            _currentImageUri.value = uri
         }
     }
 

@@ -39,7 +39,6 @@ class MainActivity : AppCompatActivity() {
     private val mainViewModel: MainViewModel by viewModels {
         ViewModelFactory.getInstance(this) as ViewModelProvider.Factory
     }
-    private var currentImageUri: Uri? = null
 
     private var requestPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -65,6 +64,13 @@ class MainActivity : AppCompatActivity() {
 
         if (!allPermissionGranted()) {
             requestPermission.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+
+        mainViewModel.currentImageUri.observe(this) { uri ->
+            if (uri != null) {
+                Log.d("Image URI", "showImage: $uri")
+                binding.previewImageView.setImageURI(uri)
+            }
         }
 
         binding.galleryButton.setOnClickListener { startGallery() }
@@ -101,7 +107,7 @@ class MainActivity : AppCompatActivity() {
         if (result.resultCode == RESULT_OK) {
             val resultUri = UCrop.getOutput(result.data!!)
             if (resultUri != null) {
-                currentImageUri = resultUri
+                mainViewModel.saveUri(resultUri)
                 showImage()
             } else {
                 Log.e("UCrop", "Crop operation failed")
@@ -110,7 +116,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showImage() {
-        currentImageUri?.let {
+        mainViewModel.currentImageUri.observe(this) {
             Log.d("Image URI", "showImage: $it")
             binding.previewImageView.setImageURI(it)
         }
@@ -127,8 +133,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun analyzeImage() {
-        currentImageUri?.let { uri ->
-            val imageFile = uriToFile(uri, this)?.reduceFileImage() // Konversi Uri ke File
+        mainViewModel.currentImageUri.observe(this) { uri ->
+            val imageFile =
+                uri?.let { uriToFile(it, this)?.reduceFileImage() } // Konversi Uri ke File
             Log.d("Image Classification File", "Show Image: ${imageFile?.path}")
 
             imageClassifierHelper = ImageClassifierHelper(context = this,
@@ -138,7 +145,9 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     override fun onResult(result: List<Classifications>) {
-                        mainViewModel.insertHistory(uri, result)
+                        if (uri != null) {
+                            mainViewModel.insertHistory(uri, result)
+                        }
                         result?.let { it ->
                             if (it.isNotEmpty()) {
                                 Log.d("Analysis Image", "Show Analysis : $result")
@@ -146,7 +155,9 @@ class MainActivity : AppCompatActivity() {
                                 val displayResult =
                                     "${category.label} " + NumberFormat.getPercentInstance()
                                         .format(category.score).trim()
-                                moveToResult(uri, displayResult)
+                                if (uri != null) {
+                                    moveToResult(uri, displayResult)
+                                }
                             } else {
                                 showToast("No classifications found")
                             }
